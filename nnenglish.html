@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>手写英语识别整理 - 豆包AI版</title>
+<script src="./nnenglish_files/FileSaver.min.js"></script>
+<script src="./nnenglish_files/index.umd.min.js"></script>
+<style>
+:root{--primary:#6C5CE7;--primary-light:#A29BFE;--bg:#F8F9FE;--card:#fff;--text:#2D3436;--text2:#636E72;--border:#E0E0E0;--success:#00B894;--warn:#FDCB6E;--error:#E17055;--radius:14px}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.6;min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+.header{background:linear-gradient(135deg,var(--primary),#A29BFE);color:#fff;padding:20px 16px 24px;text-align:center;position:sticky;top:0;z-index:100}
+.header h1{font-size:20px;font-weight:700}
+.header p{font-size:13px;opacity:.85;margin-top:4px}
+.container{padding:12px 14px 30px}
+.card{background:var(--card);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.steps{display:flex;justify-content:space-between;padding:0 4px}
+.step{text-align:center;flex:1;position:relative}
+.step::after{content:'';position:absolute;top:14px;left:55%;width:90%;height:2px;background:var(--border);z-index:0}
+.step:last-child::after{display:none}
+.step-num{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--border);color:#999;position:relative;z-index:1;transition:.3s}
+.step.active .step-num{background:var(--primary);color:#fff}
+.step.done .step-num{background:var(--success);color:#fff}
+.step-label{font-size:11px;color:var(--text2);margin-top:4px}
+.step.active .step-label{color:var(--primary);font-weight:600}
+.upload-zone{border:2.5px dashed var(--border);border-radius:var(--radius);padding:40px 20px;text-align:center;cursor:pointer;transition:.3s}
+.upload-zone:active{border-color:var(--primary);background:#F0EEFF}
+.upload-icon{font-size:48px;margin-bottom:12px}
+.upload-text{font-size:16px;font-weight:600;color:var(--text)}
+.upload-hint{font-size:12px;color:var(--text2);margin-top:6px}
+.btn-row{display:flex;gap:10px;margin-top:14px}
+.btn{flex:1;padding:13px 0;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;text-align:center}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:active{background:#5A4BD1}
+.btn-primary:disabled{background:#ccc;cursor:not-allowed}
+.btn-outline{background:#f0f0f0;color:var(--text)}
+.btn-outline:active{background:#e0e0e0}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:active{background:#00A381}
+.preview{display:none;margin-top:14px}
+.preview.show{display:block}
+.preview img{width:100%;max-height:260px;object-fit:contain;border-radius:10px;background:#f5f5f5}
+.file-info{margin-top:8px;font-size:12px;color:var(--text2);padding:8px 12px;background:#f5f5f5;border-radius:8px}
+.status{display:none;margin-top:14px;padding:14px;border-radius:10px;font-size:14px}
+.status.show{display:flex;align-items:center;gap:10px}
+.status-process{background:#FFF8E1;border:1px solid #FFD54F;color:#F57F17}
+.status-ok{background:#E8F5E9;border:1px solid #81C784;color:#2E7D32}
+.status-err{background:#FFEBEE;border:1px solid #EF9A9A;color:#C62828}
+.spinner{width:18px;height:18px;border:2.5px solid #eee;border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress{height:5px;background:var(--border);border-radius:3px;margin-top:10px;overflow:hidden}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-light));border-radius:3px;transition:width .4s;width:0}
+.results{display:none;margin-top:14px}
+.results.show{display:block}
+.cat-title{font-size:15px;font-weight:700;color:var(--primary);margin:14px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+.cat-title:first-child{margin-top:0}
+.result-item{padding:10px 12px;background:#F8F9FE;border-radius:10px;margin-bottom:8px;border-left:4px solid var(--primary)}
+.result-en{font-weight:600;font-size:14px}
+.result-tag{display:inline-block;background:var(--primary);color:#fff;font-size:10px;padding:1px 7px;border-radius:4px;margin-right:6px;vertical-align:middle}
+.result-cn{color:var(--text2);font-size:13px;margin-top:3px}
+.confidence{font-size:11px;color:#999;margin-top:2px}
+input[type=file]{display:none}
+.api-settings{display:none;margin-top:14px;padding:14px;background:#f5f5f5;border-radius:10px}
+.api-settings.show{display:block}
+.settings-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px}
+.settings-row{display:flex;margin-bottom:10px}
+.settings-row:last-child{margin-bottom:0}
+.settings-label{width:80px;font-size:13px;color:var(--text2);line-height:36px}
+.settings-input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px}
+.settings-hint{font-size:11px;color:#999;margin-top:6px}
+.save-settings{background:var(--primary);color:#fff;border:none;padding:10px 16px;border-radius:8px;font-size:13px;cursor:pointer;margin-top:10px}
+.save-settings:active{background:#5A4BD1}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📝 手写英语识别整理</h1>
+  <p>豆包AI版 · 拍照 / 选图 → 智能识别翻译 → 下载Word</p>
+</div>
+<div class="container">
+  <div class="card" style="display:none"></div>
+
+  <div class="card"><div class="steps">
+    <div class="step active" id="s1"><div class="step-num">1</div><div class="step-label">选图</div></div>
+    <div class="step" id="s2"><div class="step-num">2</div><div class="step-label">识别</div></div>
+    <div class="step" id="s3"><div class="step-num">3</div><div class="step-label">翻译分类</div></div>
+    <div class="step" id="s4"><div class="step-num">4</div><div class="step-label">下载</div></div>
+  </div></div>
+
+  <div class="card" id="uploadCard">
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-icon">📸</div>
+      <div class="upload-text">点击选择图片</div>
+      <div class="upload-hint">支持 JPG / PNG，最多5张，建议字迹清晰</div>
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-outline" onclick="$('cameraInput').click()">📷 拍照</button>
+      <button class="btn btn-outline" onclick="$('fileInput').click()">📁 相册(最多5张)</button>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" multiple max="5" style="display:none">
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
+    <div class="preview" id="preview">
+      <div id="previewGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;"></div>
+      <div class="file-info" id="fileInfo"></div>
+    </div>
+    <div class="btn-row" id="actionBtns" style="display:none">
+      <button class="btn btn-outline" onclick="resetAll()">重选</button>
+      <button class="btn btn-primary" id="startBtn" onclick="startProcess()">开始识别</button>
+    </div>
+  </div>
+
+  <div class="status" id="statusBox"><div class="spinner" id="statusSpinner"></div><span id="statusText"></span></div>
+  <div class="progress" id="progressBox" style="display:none"><div class="progress-bar" id="progressBar"></div></div>
+
+  <div class="card" id="editBox" style="display:none">
+    <div style="font-size:16px;font-weight:600;margin-bottom:12px;">✏️ 编辑识别结果</div>
+    <div style="font-size:12px;color:#666;margin-bottom:16px;">拖动调整顺序，点击删除按钮移除不需要的内容</div>
+    <div id="editList" style="max-height:400px;overflow-y:auto;"></div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="resetAll()">重新上传</button>
+      <button class="btn btn-primary" onclick="confirmEdit()">✅ 确认并下载Word</button>
+    </div>
+  </div>
+
+  <div class="card results" id="resultsBox">
+    <div id="resultsContent"></div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="resetAll()">重新上传</button>
+      <button class="btn btn-success" onclick="downloadWord()">📥 下载Word文档</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.edit-item{display:flex;align-items:center;padding:10px;background:#f8f9fe;border-radius:8px;margin-bottom:8px;border:1px solid #e0e0e0;cursor:move;user-select:none}
+.edit-item:hover{background:#f0f0ff}
+.edit-item.dragging{opacity:0.5;border:2px dashed #6C5CE7}
+.edit-num{width:30px;height:30px;background:#6C5CE7;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;flex-shrink:0;margin-right:10px}
+.edit-content{flex:1;min-width:0}
+.edit-en{font-weight:600;font-size:14px;margin-bottom:4px}
+.edit-cn{font-size:13px;color:#666}
+.edit-delete{width:36px;height:36px;background:#ff4444;color:white;border:none;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:10px}
+.edit-delete:hover{background:#dd2222}
+</style>
+
+<script>
+const IDIOMS=["break a leg","piece of cake","hit the road","bite the bullet",
+"cost an arm and a leg","once in a blue moon","under the weather","spill the beans",
+"call it a day","time flies","no pain no gain","so far so good",
+"the best of both worlds","better late than never","actions speak louder than words",
+"beat around the bush","burn the midnight oil","cut corners","let the cat out of the bag",
+"miss the boat","on the ball","pull someone's leg","speak of the devil",
+"by the skin of your teeth","get out of hand","give the cold shoulder",
+"go the extra mile","in the heat of the moment","let sleeping dogs lie",
+"miss the boat","on thin ice","a blessing in disguise","add insult to injury",
+"at the drop of a hat","back to square one","barking up the wrong tree",
+"best thing since sliced bread","when pigs fly","a dime a dozen",
+"bite off more than you can chew","cry over spilled milk","every cloud has a silver lining",
+"get a taste of your own medicine","give someone the benefit of the doubt",
+"go back to the drawing board","hang in there","hit the sack",
+"it's not rocket science","let the cat out of the bag","money doesn't grow on trees",
+"no pain no gain","once in a blue moon","pull someone's leg","so far so good",
+"the ball is in your court","the best of both worlds","the last straw",
+"under the weather","we'll cross that bridge when we come to it","wrap your head around it",
+"you can say that again","your guess is as good as mine"];
+
+const ACADEMIC=["hypothesis","methodology","empirical","theoretical","analysis","research",
+"study","experiment","data","statistics","correlation","regression","variable","parameter",
+"significant","conclusion","abstract","introduction","literature","discussion","reference",
+"citation","academic","scholarly","journal","dissertation","thesis","qualitative","quantitative"];
+
+const BUSINESS=["quarterly","annual","revenue","profit","loss","stakeholder","shareholder",
+"investor","client","customer","market","strategy","meeting","deadline","budget","forecast",
+"report","presentation","proposal","contract","negotiation","partnership","collaboration",
+"roi","kpi","schedule","agenda","minutes","invoice","margin","dividend"];
+
+const DAILY=["good morning","good afternoon","good evening","good night","hello","hi","hey",
+"how are you","how do you do","nice to meet you","pleased to meet you","see you","goodbye",
+"bye","take care","have a nice day","thank you","thanks","you're welcome","excuse me",
+"i'm sorry","please","pardon me","how's it going","what's up","long time no see","take it easy"];
+
+const CAT_NAMES={1:"日常短语",2:"学术词汇",3:"商务用语",4:"习语表达",5:"完整句子",6:"其他"};
+
+function formatEnglish(text){
+  const words=text.trim().split(/\s+/);
+  if(words.length<=3){
+    return text.toLowerCase();
+  }else{
+    if(words.length>0){
+      words[0]=words[0].charAt(0).toUpperCase()+words[0].slice(1).toLowerCase();
+    }
+    return words.join(' ');
+  }
+}
+
+function classify(text){
+  const t=text.toLowerCase().trim();
+  if(!t)return{cat:"其他",tag:6};
+  for(const id of IDIOMS)if(t.includes(id))return{cat:"习语表达",tag:4};
+  for(const w of ACADEMIC)if(t.includes(w))return{cat:"学术词汇",tag:2};
+  for(const w of BUSINESS)if(t.includes(w))return{cat:"商务用语",tag:3};
+  for(const p of DAILY)if(t.includes(p))return{cat:"日常短语",tag:1};
+  const words=t.split(/\s+/);
+  const starters=["i ","you ","he ","she ","it ","we ","they ","the ","a ","an ","this ","that ",
+  "my ","your ","his ","her ","our ","their ","there ","here ","what ","how ","when ","where ",
+  "why ","who ","which ","can ","could ","would ","should ","will ","shall ","may ","might ",
+  "do ","does ","did ","have ","has ","had ","is ","are ","was ","were ","am ","be ","been "];
+  const hasSubject=starters.some(s=>t.startsWith(s));
+  const verbPattern=/\b(is|are|was|were|am|be|have|has|had|do|does|did|will|would|could|should|go|goes|went|get|gets|got|make|makes|made|take|takes|took|come|comes|came|see|sees|saw|know|knows|knew|think|thinks|thought|want|wants|wanted|need|needs|needed|like|likes|liked|love|loves|loved|work|works|worked|play|plays|played|read|reads|write|writes|wrote|learn|learns|learned|study|studies|studied|eat|eats|ate|drink|drinks|drank|sleep|sleeps|slept|run|runs|ran|walk|walks|walked|tell|tells|told|ask|asks|asked|give|gives|gave|find|finds|found|call|calls|called|try|tries|tried|help|helps|helped|show|shows|showed|move|moves|moved|live|lives|lived|believe|believes|believed|bring|brings|brought|happen|happens|happened|stand|stands|stood|lose|loses|lost|pay|pays|paid|meet|meets|met|include|includes|included|continue|continues|continued|set|sets|change|changes|changed|lead|leads|led|understand|understands|understood|follow|follows|followed|stop|stops|stopped|create|creates|created|speak|speaks|spoke|allow|allows|allowed|add|adds|added|spend|spends|spent|grow|grows|grew|open|opens|opened|win|wins|won|offer|offers|offered|remember|remembers|remembered|consider|considers|considered|appear|appears|appeared|buy|buys|bought|wait|waits|waited|send|sends|sent|expect|expects|expected|build|builds|built|stay|stays|stayed|fall|falls|fell|reach|reaches|reached|remain|remains|remained|suggest|suggests|suggested|raise|raises|raised|pass|passes|passed|sell|sells|sold|require|requires|required|decide|decides|decided|return|returns|returned|explain|explains|explained|carry|carries|carried|develop|develops|developed|provide|provides|provided|keep|keeps|kept|begin|begins|began|hear|hears|heard|leave|leaves|left|watch|watches|watched|receive|receives|received|agree|agrees|agreed|support|supports|supported|describe|describes|described|state|states|stated|drive|drives|drove|remove|removes|removed|hope|hopes|hoped|die|dies|died|start|starts|started|feel|feels|felt|become|becomes|became|leave|leaves|left|put|puts|put|keep|keeps|kept|let|lets|let|begin|begins|began|seem|seems|seemed|help|helps|helped|show|shows|showed|hear|hears|heard|play|plays|played|run|runs|ran|move|moves|moved|live|lives|lived|believe|believes|believed|hold|holds|held|bring|brings|brought|happen|happens|happened|write|writes|wrote|provide|provides|provided|sit|sits|sat|stand|stands|stood|lose|loses|lost|pay|pays|paid|meet|meets|met|include|includes|included|continue|continues|continued|set|sets|set|change|changes|changed|lead|leads|led|understand|understands|understood|watch|watches|watched|follow|follows|followed|stop|stops|stopped|create|creates|created|speak|speaks|spoke|read|reads|allowed|allow|allows|allowed|add|adds|added|spend|spends|spent|grow|grows|grew|open|opens|opened|walk|walks|walked|win|wins|won|offer|offers|offered|remember|remembers|remembered|consider|considers|considered|appear|appears|appeared|buy|buys|bought|wait|waits|waited|use|uses|used|find|finds|found|give|gives|gave|tell|tells|told|ask|asks|asked|try|tries|tried)/;
+  if(hasSubject&&words.length>=3&&verbPattern.test(" "+t+" "))return{cat:"完整句子",tag:5};
+  if(words.length>=4&&verbPattern.test(" "+t+" "))return{cat:"完整句子",tag:5};
+  return{cat:"其他",tag:6};
+}
+
+let currentResults=[];
+let currentFiles=[];
+let apiKey="ark-4c7dd3e7-b3d9-4d11-bdbc-2457fa2c9c48-ab368";
+
+const $=id=>document.getElementById(id);
+
+function setStep(n){for(let i=1;i<=4;i++){const s=$('s'+i);s.className='step'+(i<n?' done':i===n?' active':'')}}
+function showStatus(type,msg){const b=$('statusBox');b.className='status show status-'+type;$('statusText').textContent=msg;$('statusSpinner').style.display=type==='process'?'block':'none'}
+function hideStatus(){$('statusBox').className='status'}
+function setProgress(p){$('progressBox').style.display=p>0?'block':'none';$('progressBar').style.width=p+'%'}
+
+function saveApiKey(){
+  const key=$('apiKeyInput').value.trim();
+  if(!key){alert('请输入API Key');return}
+  apiKey=key;
+  localStorage.setItem('doubao_api_key',key);
+  alert('API Key 已保存！');
+}
+
+function loadApiKey(){
+  const saved=localStorage.getItem('doubao_api_key');
+  if(saved){
+    apiKey=saved;
+    $('apiKeyInput').value=saved;
+  }
+}
+
+$('uploadZone').addEventListener('click',()=>$('fileInput').click());
+$('fileInput').addEventListener('change',e=>{if(e.target.files.length>0)handleFiles(Array.from(e.target.files))});
+$('cameraInput').addEventListener('change',e=>{if(e.target.files.length>0)handleFiles(Array.from(e.target.files))});
+
+function handleFiles(files){
+  if(files.length>5){alert('最多只能选择5张图片');return}
+  files.forEach(file=>{
+    if(!file.type.startsWith('image/')){alert('请选择图片文件');return}
+    if(file.size>15*1024*1024){alert('图片不能超过15MB');return}
+  });
+  
+  if(currentFiles.length+files.length>5){
+    alert('最多只能上传5张图片');
+    files=files.slice(0,5-currentFiles.length);
+  }
+  
+  files.forEach(file=>{
+    currentFiles.push(file);
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const div=document.createElement('div');
+      div.style.cssText='position:relative;width:80px;height:80px;';
+      div.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+        <span class="remove-btn" onclick="removeFile(${currentFiles.indexOf(file)})" style="position:absolute;top:-5px;right:-5px;width:20px;height:20px;background:red;color:white;border-radius:50%;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;">×</span>`;
+      $('previewGrid').appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+  
+  $('fileInfo').textContent=currentFiles.length+' 张图片已选择';
+  $('preview').classList.add('show');
+  $('uploadZone').style.display='none';
+  $('actionBtns').style.display='flex';
+}
+
+function removeFile(index){
+  currentFiles.splice(index,1);
+  $('previewGrid').innerHTML='';
+  currentFiles.forEach((file,i)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const div=document.createElement('div');
+      div.style.cssText='position:relative;width:80px;height:80px;';
+      div.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">
+        <span class="remove-btn" onclick="removeFile(${i})" style="position:absolute;top:-5px;right:-5px;width:20px;height:20px;background:red;color:white;border-radius:50%;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;">×</span>`;
+      $('previewGrid').appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+  if(currentFiles.length===0)resetAll();
+  else $('fileInfo').textContent=currentFiles.length+' 张图片已选择';
+}
+
+function resetAll(){
+  currentFiles=[];
+  $('previewGrid').innerHTML='';currentResults=[];
+  $('preview').classList.remove('show');
+  $('uploadZone').style.display='block';
+  $('actionBtns').style.display='none';
+  $('resultsBox').classList.remove('show');
+  hideStatus();setProgress(0);setStep(1);
+  $('startBtn').disabled=false;$('startBtn').textContent='开始识别';
+  $('fileInput').value='';
+}
+
+async function startProcess(){
+  if(currentFiles.length===0)return;
+  if(!apiKey){alert('请先设置并保存API Key');return}
+
+  $('startBtn').disabled=true;$('startBtn').textContent='处理中...';
+  setStep(2);showStatus('process','正在调用豆包AI识别...');setProgress(5);
+
+  try{
+    currentResults=[];
+    
+    for(let i=0;i<currentFiles.length;i++){
+      showStatus('process',`正在识别第 ${i+1}/${currentFiles.length} 张图片...`);
+      const base64Image=await fileToBase64(currentFiles[i]);
+      const ocrResult=await callDoubaoOCR(currentFiles[i], base64Image);
+      const lines=ocrResult.split('\n').map(l=>l.trim()).filter(l=>l.length>1);
+      
+      if(lines.length>0){
+        for(let j=0;j<lines.length;j++){
+          const rawEn=lines[j];
+          const en=formatEnglish(rawEn);
+          const cn=await callDoubaoTranslate(rawEn);
+          const {cat,tag}=classify(en);
+          const conf=0.95;
+          currentResults.push({english:en,chinese:cn,category:cat,tag,confidence:conf});
+        }
+      }
+      
+      setProgress(Math.round((i+1)/currentFiles.length*55));
+      if(i<currentFiles.length-1)await sleep(200);
+    }
+
+    if(currentResults.length===0){showStatus('err','未识别到文字，请上传更清晰的图片');$('startBtn').disabled=false;$('startBtn').textContent='开始识别';return}
+
+    setStep(3);showStatus('process','正在翻译和分类...');setProgress(60);await sleep(100);
+
+    setProgress(95);setStep(4);showStatus('ok','识别完成！共 '+currentResults.length+' 条');
+    hideStatus();
+    renderEditList();
+    $('resultsBox').style.display='none';
+    $('editBox').style.display='block';
+    setProgress(100);
+  }catch(err){
+    console.error(err);
+    showStatus('err','处理出错: '+err.message);
+    $('startBtn').disabled=false;$('startBtn').textContent='重试';
+  }
+}
+
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function callDoubaoOCR(file, base64Data){
+  const imageUrl="data:"+file.type+";base64,"+base64Data.split(',')[1];
+
+  const prompt="请识别图片中所有的英文手写文字，只返回识别出的英文内容，每行一条，不要添加任何解释或翻译。用英文回复。";
+
+  const response=await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions',{
+    method:'POST',
+    headers:{
+      'Authorization':'Bearer '+apiKey,
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({
+      model:"doubao-seed-2-0-pro-260215",
+      messages:[{
+        role:"user",
+        content:[
+          {type:"image_url",image_url:imageUrl},
+          {type:"text",text:prompt}
+        ]
+      }]
+    })
+  });
+
+  if(!response.ok){
+    const err=await response.text();
+    throw new Error('API调用失败: '+err);
+  }
+
+  const data=await response.json();
+  console.log('OCR响应:', data);
+  
+  if(!data || !data.choices){
+    throw new Error('API响应格式错误: 缺少choices字段');
+  }
+  
+  if(data.choices.length === 0){
+    throw new Error('API响应格式错误: choices为空');
+  }
+  
+  const message = data.choices[0].message;
+  if(!message || !message.content){
+    throw new Error('API响应格式错误: 缺少message.content字段');
+  }
+  
+  return message.content;
+}
+
+async function callDoubaoTranslate(text){
+  const isSentence=text.split(/\s+/).length>3;
+  let prompt;
+  if(isSentence){
+    prompt="将以下英文翻译成简洁的中文译文，用最少的汉字表达原意，只返回翻译结果，不要解释：\n\n"+text;
+  }else{
+    prompt="将以下英文单词翻译成中文（控制在5个汉字以内），只返回翻译结果，不要解释：\n\n"+text;
+  }
+
+  const response=await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions',{
+    method:'POST',
+    headers:{
+      'Authorization':'Bearer '+apiKey,
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({
+      model:"doubao-seed-2-0-pro-260215",
+      messages:[{
+        role:"user",
+        content:prompt
+      }]
+    })
+  });
+
+  if(!response.ok){
+    const err=await response.text();
+    throw new Error('翻译API调用失败: '+err);
+  }
+
+  const data=await response.json();
+  
+  if(!data || !data.choices){
+    throw new Error('API响应格式错误: 缺少choices字段');
+  }
+  
+  if(data.choices.length === 0){
+    throw new Error('API响应格式错误: choices为空');
+  }
+  
+  const message = data.choices[0].message;
+  if(!message || !message.content){
+    throw new Error('API响应格式错误: 缺少message.content字段');
+  }
+  
+  let cn=message.content.trim();
+  if(cn.length>15){
+    cn=cn.substring(0,15);
+  }
+  
+  return cn;
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+function renderResults(){
+  const box=$('resultsContent');box.innerHTML='';
+  const groups={};
+  currentResults.forEach(r=>{if(!groups[r.tag])groups[r.tag]=[];groups[r.tag].push(r)});
+  const order=[1,4,2,3,5,6];
+  order.forEach(tag=>{
+    if(!groups[tag])return;
+    let html=`<div class="cat-title">[${tag}] ${CAT_NAMES[tag]}（${groups[tag].length}条）</div>`;
+    groups[tag].forEach((r,i)=>{
+      html+=`<div class="result-item">
+        <div class="result-en"><span class="result-tag">${tag}</span>${esc(r.english)}</div>
+        <div class="result-cn">${esc(r.chinese)}</div>
+        <div class="confidence">置信度: ${(r.confidence*100).toFixed(0)}%</div>
+      </div>`;
+    });
+    box.innerHTML+=html;
+  });
+  $('resultsBox').classList.add('show');
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function renderEditList(){
+  const box=$('editList');
+  box.innerHTML='';
+  currentResults.forEach((r,i)=>{
+    const div=document.createElement('div');
+    div.className='edit-item';
+    div.draggable=true;
+    div.dataset.index=i;
+    div.innerHTML=`
+      <div class="edit-num">${i+1}</div>
+      <div class="edit-content">
+        <div class="edit-cn">${esc(r.chinese)}</div>
+        <div class="edit-en">${esc(r.english)}</div>
+      </div>
+      <button class="edit-delete" onclick="deleteEditItem(${i})">×</button>
+    `;
+    
+    div.addEventListener('dragstart',handleDragStart);
+    div.addEventListener('dragover',handleDragOver);
+    div.addEventListener('drop',handleDrop);
+    div.addEventListener('dragend',handleDragEnd);
+    
+    box.appendChild(div);
+  });
+}
+
+let draggedItem=null;
+
+function handleDragStart(e){
+  draggedItem=this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+}
+
+function handleDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+}
+
+function handleDrop(e){
+  e.preventDefault();
+  if(this!==draggedItem){
+    const fromIndex=parseInt(draggedItem.dataset.index);
+    const toIndex=parseInt(this.dataset.index);
+    const item=currentResults.splice(fromIndex,1)[0];
+    currentResults.splice(toIndex,0,item);
+    renderEditList();
+  }
+}
+
+function handleDragEnd(){
+  this.classList.remove('dragging');
+}
+
+function deleteEditItem(index){
+  currentResults.splice(index,1);
+  if(currentResults.length===0){
+    resetAll();
+  }else{
+    renderEditList();
+  }
+}
+
+function confirmEdit(){
+  $('editBox').style.display='none';
+  $('resultsBox').style.display='block';
+  renderResults();
+  downloadWord();
+}
+
+async function downloadWord(){
+  if(!currentResults.length)return;
+  showStatus('process','正在生成Word文档...');
+
+  try{
+    const{Document,Packer,Paragraph,TextRun,TabStopPosition,TabStopType}=docx;
+
+    const children=[];
+
+    children.push(new Paragraph({spacing:{after:200},
+      children:[new TextRun({text:"手写英语笔记整理",bold:true,size:28,font:"Microsoft YaHei"})]}));
+    children.push(new Paragraph({spacing:{after:100},
+      children:[new TextRun({text:"生成日期: "+new Date().toLocaleString('zh-CN'),size:16,font:"Microsoft YaHei"})]}));
+    children.push(new Paragraph({spacing:{after:300},
+      children:[new TextRun({text:""})]}));
+
+    currentResults.forEach((r,i)=>{
+      let cn=r.chinese;
+      if(cn.length>10){
+        cn=cn.substring(0,10);
+      }
+      
+      children.push(new Paragraph({
+        spacing:{after:60},
+        tabStops:[
+          {type:TabStopType.LEFT,position:400},
+          {type:TabStopType.RIGHT,position:8640}
+        ],
+        children:[
+          new TextRun({text:(i+1).toString()+'.',size:20,font:"Microsoft YaHei",bold:true}),
+          new TextRun({text:"\t",size:20}),
+          new TextRun({text:cn,size:20,font:"Microsoft YaHei",color:"666666"}),
+          new TextRun({text:"\t",size:20}),
+          new TextRun({text:r.english,size:20,font:"Arial"})
+        ]
+      }));
+    });
+
+    const doc=new Document({
+      styles:{default:{document:{run:{font:"Arial",size:20}}}},
+      sections:[{properties:{page:{margin:{top:1440,right:1440,bottom:1440,left:1440}}},
+        children}]
+    });
+
+    const blob=await Packer.toBlob(doc);
+    saveAs(blob,'英语笔记整理_'+Date.now()+'.docx');
+    showStatus('ok','文档已下载！');
+  }catch(err){
+    console.error(err);
+    showStatus('err','生成文档失败: '+err.message);
+  }
+}
+
+window.addEventListener('DOMContentLoaded',function(){
+  loadApiKey();
+});
+</script>
+
+
+</body></html>
