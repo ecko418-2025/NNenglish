@@ -2,7 +2,7 @@
 <html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Pro English OCR - 智能手写识别</title>
+<title>英语手写识别 - 智能手写识别</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -171,7 +171,7 @@ body {
 </head>
 <body>
 <div class="header">
-  <h1>Pro English OCR</h1>
+  <h1>英语手写识别</h1>
   <p>智能手写识别 · 自动翻译分类 · 极速 Word 导出</p>
 </div>
 
@@ -237,40 +237,6 @@ body {
 
 
 <script>
-const IDIOMS=["break a leg","piece of cake","hit the road","bite the bullet",
-"cost an arm and a leg","once in a blue moon","under the weather","spill the beans",
-"call it a day","time flies","no pain no gain","so far so good",
-"the best of both worlds","better late than never","actions speak louder than words",
-"beat around the bush","burn the midnight oil","cut corners","let the cat out of the bag",
-"miss the boat","on the ball","pull someone's leg","speak of the devil",
-"by the skin of your teeth","get out of hand","give the cold shoulder",
-"go the extra mile","in the heat of the moment","let sleeping dogs lie",
-"miss the boat","on thin ice","a blessing in disguise","add insult to injury",
-"at the drop of a hat","back to square one","barking up the wrong tree",
-"best thing since sliced bread","when pigs fly","a dime a dozen",
-"bite off more than you can chew","cry over spilled milk","every cloud has a silver lining",
-"get a taste of your own medicine","give someone the benefit of the doubt",
-"go back to the drawing board","hang in there","hit the sack",
-"it's not rocket science","let the cat out of the bag","money doesn't grow on trees",
-"no pain no gain","once in a blue moon","pull someone's leg","so far so good",
-"the ball is in your court","the best of both worlds","the last straw",
-"under the weather","we'll cross that bridge when we come to it","wrap your head around it",
-"you can say that again","your guess is as good as mine"];
-
-const ACADEMIC=["hypothesis","methodology","empirical","theoretical","analysis","research",
-"study","experiment","data","statistics","correlation","regression","variable","parameter",
-"significant","conclusion","abstract","introduction","literature","discussion","reference",
-"citation","academic","scholarly","journal","dissertation","thesis","qualitative","quantitative"];
-
-const BUSINESS=["quarterly","annual","revenue","profit","loss","stakeholder","shareholder",
-"investor","client","customer","market","strategy","meeting","deadline","budget","forecast",
-"report","presentation","proposal","contract","negotiation","partnership","collaboration",
-"roi","kpi","schedule","agenda","minutes","invoice","margin","dividend"];
-
-const DAILY=["good morning","good afternoon","good evening","good night","hello","hi","hey",
-"how are you","how do you do","nice to meet you","pleased to meet you","see you","goodbye",
-"bye","take care","have a nice day","thank you","thanks","you're welcome","excuse me",
-"i'm sorry","please","pardon me","how's it going","what's up","long time no see","take it easy"];
 
 const CAT_NAMES={1:"日常短语",2:"学术词汇",3:"商务用语",4:"习语表达",5:"完整句子",6:"其他"};
 
@@ -286,24 +252,6 @@ function formatEnglish(text){
   }
 }
 
-function classify(text){
-  const t=text.toLowerCase().trim();
-  if(!t)return{cat:"其他",tag:6};
-  for(const id of IDIOMS)if(t.includes(id))return{cat:"习语表达",tag:4};
-  for(const w of ACADEMIC)if(t.includes(w))return{cat:"学术词汇",tag:2};
-  for(const w of BUSINESS)if(t.includes(w))return{cat:"商务用语",tag:3};
-  for(const p of DAILY)if(t.includes(p))return{cat:"日常短语",tag:1};
-  const words=t.split(/\s+/);
-  const starters=["i ","you ","he ","she ","it ","we ","they ","the ","a ","an ","this ","that ",
-  "my ","your ","his ","her ","our ","their ","there ","here ","what ","how ","when ","where ",
-  "why ","who ","which ","can ","could ","would ","should ","will ","shall ","may ","might ",
-  "do ","does ","did ","have ","has ","had ","is ","are ","was ","were ","am ","be ","been "];
-  const hasSubject=starters.some(s=>t.startsWith(s));
-  const verbPattern=/\b(is|are|was|were|am|be|have|has|had|do|does|did|will|would|could|should|go|goes|went|get|gets|got|make|makes|made|take|takes|took|come|comes|came|see|sees|saw|know|knows|knew|think|thinks|thought|want|wants|wanted|need|needs|needed|like|likes|liked|love|loves|loved|work|works|worked|play|plays|played|read|reads|write|writes|wrote|learn|learns|learned|study|studies|studied|eat|eats|ate|drink|drinks|drank|sleep|sleeps|slept|run|runs|ran|walk|walks|walked|tell|tells|told|ask|asks|asked|give|gives|gave|find|finds|found|call|calls|called|try|tries|tried|help|helps|helped|show|shows|showed|move|moves|moved|live|lives|lived|believe|believes|believed|bring|brings|brought|happen|happens|happened|stand|stands|stood|lose|loses|lost|pay|pays|paid|meet|meets|met|include|includes|included|continue|continues|continued|set|sets|change|changes|changed|lead|leads|led|understand|understands|understood|follow|follows|followed|stop|stops|stopped|create|creates|created|speak|speaks|spoke|allow|allows|allowed|add|adds|added|spend|spends|spent|grow|grows|grew|open|opens|opened|win|wins|won|offer|offers|offered|remember|remembers|remembered|consider|considers|considered|appear|appears|appeared|buy|buys|bought|wait|waits|waited|send|sends|sent|expect|expects|expected|build|builds|built|stay|stays|stayed|fall|falls|fell|reach|reaches|reached|remain|remains|remained|suggest|suggests|suggested|raise|raises|raised|pass|passes|passed|sell|sells|sold|require|requires|required|decide|decides|decided|return|returns|returned|explain|explains|explained|carry|carries|carried|develop|develops|developed|provide|provides|provided|keep|keeps|kept|begin|begins|began|hear|hears|heard|leave|leaves|left|watch|watches|watched|receive|receives|received|agree|agrees|agreed|support|supports|supported|describe|describes|described|state|states|stated|drive|drives|drove|remove|removes|removed|hope|hopes|hoped|die|dies|died|start|starts|started|feel|feels|felt|become|becomes|became|leave|leaves|left|put|puts|put|keep|keeps|kept|let|lets|let|begin|begins|began|seem|seems|seemed|help|helps|helped|show|shows|showed|hear|hears|heard|play|plays|played|run|runs|ran|move|moves|moved|live|lives|lived|believe|believes|believed|hold|holds|held|bring|brings|brought|happen|happens|happened|write|writes|wrote|provide|provides|provided|sit|sits|sat|stand|stands|stood|lose|loses|lost|pay|pays|paid|meet|meets|met|include|includes|included|continue|continues|continued|set|sets|set|change|changes|changed|lead|leads|led|understand|understands|understood|watch|watches|watched|follow|follows|followed|stop|stops|stopped|create|creates|created|speak|speaks|spoke|read|reads|allowed|allow|allows|allowed|add|adds|added|spend|spends|spent|grow|grows|grew|open|opens|opened|walk|walks|walked|win|wins|won|offer|offers|offered|remember|remembers|remembered|consider|considers|considered|appear|appears|appeared|buy|buys|bought|wait|waits|waited|use|uses|used|find|finds|found|give|gives|gave|tell|tells|told|ask|asks|asked|try|tries|tried)/;
-  if(hasSubject&&words.length>=3&&verbPattern.test(" "+t+" "))return{cat:"完整句子",tag:5};
-  if(words.length>=4&&verbPattern.test(" "+t+" "))return{cat:"完整句子",tag:5};
-  return{cat:"其他",tag:6};
-}
 
 let currentResults=[];
 let currentFiles=[];
@@ -517,7 +465,8 @@ async function startProcess(){
             orderedResults[index] = items.map(item => {
               const en = formatEnglish(item.en || "");
               const cn = item.cn || '待翻译';
-              const { cat, tag } = classify(en);
+              const tag = typeof item.tag === 'number' && item.tag >= 1 && item.tag <= 6 ? item.tag : 6;
+              const cat = CAT_NAMES[tag] || CAT_NAMES[6];
               return { english: en, chinese: cn, category: cat, tag: tag, confidence: 0.98 };
             });
           } else {
@@ -619,8 +568,14 @@ function compressImage(file, maxWidth = 1024, quality = 0.7) {
 
 async function callDoubaoOCR(base64Image){
   const prompt = `Handwritten OCR Task:
-Recognize all English text in the image and translate to Chinese.
-Return ONLY a JSON object: {"results": [{"en": "...", "cn": "..."}]}`;
+Recognize all English text in the image, translate to Chinese, and classify each item into one of the following tags (return the integer tag only):
+1: 日常短语 (Daily Phrases)
+2: 学术词汇 (Academic Words)
+3: 商务用语 (Business Terms)
+4: 习语表达 (Idioms)
+5: 完整句子 (Complete Sentences)
+6: 其他 (Other/Unclassified)
+Return ONLY a JSON object in this format: {"results": [{"en": "...", "cn": "...", "tag": 1}]}`;
 
   const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions',{
     method:'POST',
