@@ -16,8 +16,18 @@ Return ONLY a JSON object in this format: {"results": [{"en": "...", "cn": "..."
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: CORS_HEADERS });
+    }
+
+    if (request.method === 'GET') {
+      return env.ASSETS.fetch(request);
+    }
+
+    if (url.pathname !== '/api/ocr') {
+      return jsonResponse({ error: 'Not found' }, 404);
     }
 
     if (request.method !== 'POST') {

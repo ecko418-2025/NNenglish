@@ -2,5 +2,9 @@ name = "dawnbird"
 main = "src/index.js"
 compatibility_date = "2026-06-07"
 
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
 [vars]
 DOUBAO_MODEL = "doubao-seed-2-0-pro-260215"
