@@ -1,8 +1,10 @@
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+
+const DOC_INDEX_KEY = 'documents:index';
 
 const OCR_PROMPT = `Handwritten OCR Task:
 Recognize all English text in the image, translate to Chinese, and classify each item into one of the following tags (return the integer tag only):
@@ -20,6 +22,18 @@ export default {
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: CORS_HEADERS });
+    }
+
+    if (url.pathname === '/api/documents' && request.method === 'GET') {
+      return listDocuments(env);
+    }
+
+    if (url.pathname === '/api/documents' && request.method === 'POST') {
+      return saveDocument(request, env);
+    }
+
+    if (url.pathname.startsWith('/files/') && (request.method === 'GET' || request.method === 'HEAD')) {
+      return downloadDocument(url, env, request.method === 'HEAD');
     }
 
     if (request.method === 'GET') {
@@ -78,6 +92,107 @@ export default {
     return jsonResponse({ results });
   },
 };
+
+async function listDocuments(env) {
+  const documents = await readDocumentIndex(env);
+  return jsonResponse({ documents });
+}
+
+async function saveDocument(request, env) {
+  if (!env.DOCS_KV) {
+    return jsonResponse({ error: 'Missing DOCS_KV binding' }, 500);
+  }
+
+  let form;
+  try {
+    form = await request.formData();
+  } catch (error) {
+    return jsonResponse({ error: 'Invalid form data' }, 400);
+  }
+
+  const file = form.get('file');
+  const title = cleanTitle(String(form.get('title') || '英语笔记整理'));
+  if (!file || typeof file.arrayBuffer !== 'function') {
+    return jsonResponse({ error: 'Missing Word file' }, 400);
+  }
+
+  const bytes = await file.arrayBuffer();
+  const now = new Date();
+  const id = `${now.getTime()}-${crypto.randomUUID().slice(0, 8)}`;
+  const fileName = `${title}_${now.getTime()}.docx`;
+  const key = `documents/${id}.docx`;
+
+  await env.DOCS_KV.put(key, bytes, {
+    metadata: {
+      title,
+      fileName,
+      size: bytes.byteLength,
+      createdAt: now.toISOString(),
+    },
+  });
+
+  const documents = await readDocumentIndex(env);
+  const item = {
+    id,
+    title,
+    fileName,
+    key,
+    size: bytes.byteLength,
+    createdAt: now.toISOString(),
+    url: `/files/${encodeURIComponent(id)}.docx`,
+  };
+  documents.unshift(item);
+  await writeDocumentIndex(env, documents.slice(0, 50));
+
+  return jsonResponse({ document: item });
+}
+
+async function downloadDocument(url, env, headOnly = false) {
+  if (!env.DOCS_KV) {
+    return jsonResponse({ error: 'Missing DOCS_KV binding' }, 500);
+  }
+
+  const fileId = decodeURIComponent(url.pathname.replace('/files/', '')).replace(/\.docx$/, '');
+  if (!/^[0-9]+-[a-f0-9-]+$/i.test(fileId)) {
+    return jsonResponse({ error: 'Invalid file id' }, 400);
+  }
+
+  const result = await env.DOCS_KV.getWithMetadata(`documents/${fileId}.docx`, 'arrayBuffer');
+  if (!result.value) {
+    return jsonResponse({ error: 'Document not found' }, 404);
+  }
+
+  const headers = new Headers();
+  const fileName = result.metadata?.fileName || `${fileId}.docx`;
+  headers.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  headers.set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+  headers.set('Cache-Control', 'private, max-age=0, no-store');
+  return new Response(headOnly ? null : result.value, { headers });
+}
+
+async function readDocumentIndex(env) {
+  if (!env.DOCS_KV) return [];
+  const text = await env.DOCS_KV.get(DOC_INDEX_KEY);
+  if (!text) return [];
+  try {
+    const data = JSON.parse(text);
+    return Array.isArray(data.documents) ? data.documents : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+async function writeDocumentIndex(env, documents) {
+  await env.DOCS_KV.put(DOC_INDEX_KEY, JSON.stringify({ documents }, null, 2));
+}
+
+function cleanTitle(title) {
+  return title
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 40) || '英语笔记整理';
+}
 
 function parseResults(rawContent) {
   const jsonMatch = rawContent.match(/\{[\s\S]*\}/);

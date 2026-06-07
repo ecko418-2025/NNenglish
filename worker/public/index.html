@@ -232,6 +232,69 @@ body {
   text-decoration: none;
 }
 
+.history-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.history-title h3 { font-size: 18px; }
+
+.history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.history-empty {
+  padding: 18px;
+  border-radius: 8px;
+  background: #f8fbff;
+  border: 1px dashed #bfdbfe;
+  color: var(--text-dim);
+  font-weight: 700;
+  text-align: center;
+}
+
+.history-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 8px;
+  background: #f8fbff;
+  border: 1px solid #dbeafe;
+}
+
+.history-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.history-meta {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.history-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid #bfdbfe;
+  color: #1d4ed8;
+  background: #fff;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .spinner { width: 20px; height: 20px; border: 3px solid #bfdbfe; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -247,6 +310,8 @@ body {
   .upload-zone { min-height: 190px; padding: 28px 14px; }
   .upload-text { font-size: 18px; }
   .btn { font-size: 15px; padding: 13px 14px; }
+  .history-item { grid-template-columns: 1fr; }
+  .history-link { width: 100%; }
 }
 </style>
 </head>
@@ -296,6 +361,16 @@ body {
 
   <div class="status-box" id="statusBox"><div class="spinner" id="statusSpinner"></div><span id="statusText"></span></div>
   <div class="progress-container" id="progressBox"><div class="progress-bar" id="progressBar"></div></div>
+
+  <div class="card" id="historyCard">
+    <div class="history-title">
+      <h3>最近生成的 Word</h3>
+      <button class="btn btn-outline" style="min-height:40px; padding:8px 12px; font-size:13px;" onclick="loadDocumentHistory()">刷新</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">还没有云端文档</div>
+    </div>
+  </div>
 
   <div class="card" id="editBox" style="display:none">
     <h3 style="margin-bottom:16px;">检查识别结果</h3>
@@ -411,6 +486,18 @@ function getWorkerEndpoint(){
   return workerEndpoint;
 }
 
+function getWorkerOrigin(){
+  try {
+    return new URL(getWorkerEndpoint()).origin;
+  } catch (error) {
+    return DEFAULT_WORKER_ENDPOINT.replace('/api/ocr', '');
+  }
+}
+
+function workerUrl(path){
+  return getWorkerOrigin() + path;
+}
+
 $('uploadZone').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',e=>{if(e.target.files.length>0)handleFiles(Array.from(e.target.files))});
 $('cameraInput').addEventListener('change',e=>{if(e.target.files.length>0)handleFiles(Array.from(e.target.files))});
@@ -516,8 +603,7 @@ function resetAll(){
 function clearDownloadHelp() {
   const box = $('downloadHelp');
   if (!box) return;
-  const oldLink = box.querySelector('a');
-  if (oldLink && oldLink.href) URL.revokeObjectURL(oldLink.href);
+  box.querySelectorAll('a[href^="blob:"]').forEach(link => URL.revokeObjectURL(link.href));
   box.className = 'download-help';
   box.innerHTML = '';
 }
@@ -539,6 +625,31 @@ function showManualDownload(blob, fileName) {
   box.appendChild(link);
 }
 
+function showCloudDownload(doc, blob, fileName) {
+  const box = $('downloadHelp');
+  if (!box) return;
+  clearDownloadHelp();
+  const localUrl = URL.createObjectURL(blob);
+  const cloudUrl = workerUrl(doc.url);
+  const text = document.createElement('div');
+  text.textContent = 'Word 已保存到云端。以后可以在首页“最近生成的 Word”里重新下载。';
+  const cloudLink = document.createElement('a');
+  cloudLink.className = 'manual-download-link';
+  cloudLink.href = cloudUrl;
+  cloudLink.target = '_blank';
+  cloudLink.rel = 'noopener';
+  cloudLink.textContent = '打开云端 Word';
+  const localLink = document.createElement('a');
+  localLink.className = 'manual-download-link';
+  localLink.href = localUrl;
+  localLink.download = fileName;
+  localLink.textContent = '保存到本机';
+  box.className = 'download-help show';
+  box.appendChild(text);
+  box.appendChild(cloudLink);
+  box.appendChild(localLink);
+}
+
 function triggerNativeDownload(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -551,6 +662,84 @@ function triggerNativeDownload(blob, fileName) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }, 1000);
+}
+
+async function uploadDocumentToCloud(blob, fileName, title) {
+  const form = new FormData();
+  form.append('title', title);
+  form.append('file', blob, fileName);
+  const response = await fetch(workerUrl('/api/documents'), {
+    method: 'POST',
+    body: form,
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || '云端保存失败');
+  }
+  const data = await response.json();
+  return data.document;
+}
+
+async function loadDocumentHistory() {
+  const list = $('historyList');
+  if (!list) return;
+  list.innerHTML = '<div class="history-empty">正在读取云端文档...</div>';
+  try {
+    const response = await fetch(workerUrl('/api/documents'));
+    if (!response.ok) throw new Error('读取失败');
+    const data = await response.json();
+    renderDocumentHistory(data.documents || []);
+  } catch (error) {
+    list.innerHTML = '<div class="history-empty">暂时读取不到云端文档</div>';
+  }
+}
+
+function renderDocumentHistory(documents) {
+  const list = $('historyList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!documents.length) {
+    list.innerHTML = '<div class="history-empty">还没有云端文档</div>';
+    return;
+  }
+  documents.slice(0, 8).forEach(doc => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const info = document.createElement('div');
+    const name = document.createElement('div');
+    name.className = 'history-name';
+    name.textContent = doc.title || doc.fileName || '英语笔记整理';
+    const meta = document.createElement('div');
+    meta.className = 'history-meta';
+    meta.textContent = `${formatTime(doc.createdAt)} · ${formatSize(doc.size || 0)}`;
+    const link = document.createElement('a');
+    link.className = 'history-link';
+    link.href = workerUrl(doc.url);
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = '下载';
+    info.appendChild(name);
+    info.appendChild(meta);
+    item.appendChild(info);
+    item.appendChild(link);
+    list.appendChild(item);
+  });
+}
+
+function formatTime(value) {
+  if (!value) return '刚刚';
+  return new Date(value).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '0 KB';
+  if (bytes < 1024 * 1024) return Math.ceil(bytes / 1024) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 }
 
 async function startProcess(){
@@ -809,30 +998,8 @@ async function downloadWord(){
   clearDownloadHelp();
   const customTitle = $('docTitle').value.trim() || '英语笔记整理';
   const fileName = `${customTitle}_${Date.now()}.docx`;
-  let fileHandle = null;
 
-  if (window.showSaveFilePicker) {
-    try {
-      fileHandle = await window.showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{
-          description: 'Word 文档',
-          accept: {
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
-          }
-        }]
-      });
-    } catch (err) {
-      if (err && err.name === 'AbortError') {
-        showStatus('ok', '已取消保存');
-        setTimeout(hideStatus, 1500);
-        return;
-      }
-      fileHandle = null;
-    }
-  }
-
-  showStatus('process','正在导出精美 Word 文档...');
+  showStatus('process','正在生成 Word 并保存到云端...');
 
   try{
     const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, VerticalAlign } = docx;
@@ -901,16 +1068,11 @@ async function downloadWord(){
     });
 
     const blob = await Packer.toBlob(doc);
-    if (fileHandle) {
-      const writable = await fileHandle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      showStatus('ok', '文档已保存到你选择的位置！');
-    } else {
-      showManualDownload(blob, fileName);
-      triggerNativeDownload(blob, fileName);
-      showStatus('ok', '已生成 Word。若没有自动下载，请点下方保存链接。');
-    }
+    const cloudDoc = await uploadDocumentToCloud(blob, fileName, customTitle);
+    showCloudDownload(cloudDoc, blob, fileName);
+    triggerNativeDownload(blob, fileName);
+    await loadDocumentHistory();
+    showStatus('ok', 'Word 已保存到云端，也已尝试下载到本机');
   } catch (err) {
     console.error(err);
     showStatus('err', '导出失败: ' + err.message);
@@ -930,6 +1092,7 @@ function copyResults(){
 
 window.addEventListener('DOMContentLoaded',function(){
   tryRestoreState(); // 尝试恢复历史
+  loadDocumentHistory();
 });
 
 window.addEventListener('beforeunload', (e) => {
