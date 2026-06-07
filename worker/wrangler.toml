@@ -1,0 +1,6 @@
+name = "nnenglish-ocr"
+main = "src/index.js"
+compatibility_date = "2026-06-07"
+
+[vars]
+DOUBAO_MODEL = "doubao-seed-2-0-pro-260215"

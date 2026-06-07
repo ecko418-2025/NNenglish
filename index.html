@@ -337,7 +337,7 @@ function formatEnglish(text){
 
 let currentResults=[];
 let currentFiles=[];
-let apiKey=localStorage.getItem('doubao_api_key') || "";
+let workerEndpoint=localStorage.getItem('ocr_worker_endpoint') || "";
 let wakeLock = null;
 
 const $=id=>document.getElementById(id);
@@ -400,31 +400,14 @@ function showStatus(type,msg){const b=$('statusBox');b.className='status-box sho
 function hideStatus(){$('statusBox').className='status-box'}
 function setProgress(p){$('progressBox').style.display=p>0?'block':'none';$('progressBar').style.width=p+'%'}
 
-function saveApiKey(){
-  const input = $('apiKeyInput');
-  const key=(input ? input.value : '').trim();
-  if(!key){alert('请输入API Key');return}
-  apiKey=key;
-  localStorage.setItem('doubao_api_key',key);
-  alert('API Key 已保存！');
-}
-
-function loadApiKey(){
-  const saved=localStorage.getItem('doubao_api_key');
-  if(saved){
-    apiKey=saved;
-    const input = $('apiKeyInput');
-    if (input) input.value=saved;
-  }
-}
-
-function ensureApiKey(){
-  if(apiKey) return true;
-  const key = prompt('请输入 API Key。只会保存在当前浏览器，不会写入项目文件。');
-  if(!key || !key.trim()) return false;
-  apiKey = key.trim();
-  localStorage.setItem('doubao_api_key', apiKey);
-  return true;
+function getWorkerEndpoint(){
+  const endpoint = (workerEndpoint || '').trim();
+  if (endpoint) return endpoint;
+  const input = prompt('请输入 Cloudflare Worker 接口地址。部署完成后只需设置一次。');
+  if (!input || !input.trim()) return '';
+  workerEndpoint = input.trim().replace(/\/$/, '');
+  localStorage.setItem('ocr_worker_endpoint', workerEndpoint);
+  return workerEndpoint;
 }
 
 $('uploadZone').addEventListener('click',()=>$('fileInput').click());
@@ -571,7 +554,7 @@ function triggerNativeDownload(blob, fileName) {
 
 async function startProcess(){
   if(currentFiles.length===0)return;
-  if(!ensureApiKey()){alert('需要 API Key 才能开始识别');return}
+  if(!getWorkerEndpoint()){alert('需要先配置 Cloudflare Worker 接口地址');return}
 
   $('startBtn').disabled=true;
   $('startBtn').textContent='⚡ 正在加速处理...';
@@ -701,53 +684,26 @@ function compressImage(file, maxWidth = 1024, quality = 0.7) {
 }
 
 async function callDoubaoOCR(base64Image){
-  const prompt = `Handwritten OCR Task:
-Recognize all English text in the image, translate to Chinese, and classify each item into one of the following tags (return the integer tag only):
-1: 日常短语 (Daily Phrases)
-2: 学术词汇 (Academic Words)
-3: 商务用语 (Business Terms)
-4: 习语表达 (Idioms)
-5: 完整句子 (Complete Sentences)
-6: 其他 (Other/Unclassified)
-Return ONLY a JSON object in this format: {"results": [{"en": "...", "cn": "...", "tag": 1}]}`;
+  const endpoint = getWorkerEndpoint();
+  if(!endpoint) throw new Error('未配置 Cloudflare Worker 接口');
 
-  const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions',{
+  const response = await fetch(endpoint,{
     method:'POST',
     headers:{
-      'Authorization':'Bearer '+apiKey,
       'Content-Type':'application/json'
     },
     body:JSON.stringify({
-      model:'doubao-seed-2-0-pro-260215',
-      // response_format: { type: 'json_object' }, // 有时会导致不必要的延迟，靠 prompt 约束即可
-      messages:[{
-        role:'user',
-        content:[
-          {type:'image_url', image_url: {url: base64Image}},
-          {type:'text', text:prompt}
-        ]
-      }]
+      image: base64Image
     })
   });
 
   if(!response.ok){
     const errText = await response.text();
-    throw new Error('API连接失败');
+    throw new Error(errText || 'Worker连接失败');
   }
 
   const data = await response.json();
-  const rawContent = data.choices[0].message.content.trim();
-  
-  try {
-    // 鲁棒性更强的 JSON 提取逻辑
-    const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : rawContent;
-    const result = JSON.parse(jsonStr);
-    return result.results || (Array.isArray(result) ? result : []);
-  } catch (e) {
-    console.error('OCR解析详情:', rawContent);
-    throw new Error('识别数据处理异常');
-  }
+  return data.results || [];
 }
 // callDoubaoTranslate 已移除，功能合并至 OCR 调用中
 
@@ -972,7 +928,6 @@ function copyResults(){
 }
 
 window.addEventListener('DOMContentLoaded',function(){
-  loadApiKey();
   tryRestoreState(); // 尝试恢复历史
 });
 
