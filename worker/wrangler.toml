@@ -1,4 +1,4 @@
-name = "nnenglish-ocr"
+name = "dawnbird"
 main = "src/index.js"
 compatibility_date = "2026-06-07"
 

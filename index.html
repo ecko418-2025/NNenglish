@@ -337,7 +337,8 @@ function formatEnglish(text){
 
 let currentResults=[];
 let currentFiles=[];
-let workerEndpoint=localStorage.getItem('ocr_worker_endpoint') || "";
+const DEFAULT_WORKER_ENDPOINT = "https://dawnbird.ecko418.workers.dev/";
+let workerEndpoint=localStorage.getItem('ocr_worker_endpoint') || DEFAULT_WORKER_ENDPOINT;
 let wakeLock = null;
 
 const $=id=>document.getElementById(id);
