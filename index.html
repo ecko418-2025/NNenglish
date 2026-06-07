@@ -232,6 +232,14 @@ body {
   text-decoration: none;
 }
 
+.demo-note {
+  margin-top: 14px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .history-title {
   display: flex;
   align-items: center;
@@ -345,6 +353,8 @@ body {
       <button class="btn btn-outline" style="flex:1" onclick="$('cameraInput').click()">📷 拍照</button>
       <button class="btn btn-outline" style="flex:1" onclick="$('fileInput').click()">📁 相册</button>
     </div>
+    <button class="btn btn-outline" style="width:100%; margin-top:12px;" onclick="loadDemoResults()">体验示例结果</button>
+    <div class="demo-note">不用上传图片，也可以先看看编辑页和完成页</div>
     <input type="file" id="fileInput" accept="image/*" multiple max="5" style="display:none">
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
     
@@ -662,6 +672,30 @@ function triggerNativeDownload(blob, fileName) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }, 1000);
+}
+
+function loadDemoResults() {
+  currentFiles = [];
+  currentResults = [
+    { english: 'good morning', chinese: '早上好', category: CAT_NAMES[1], tag: 1, confidence: 1 },
+    { english: 'take notes', chinese: '记笔记', category: CAT_NAMES[1], tag: 1, confidence: 1 },
+    { english: 'important', chinese: '重要的', category: CAT_NAMES[2], tag: 2, confidence: 1 },
+    { english: 'Practice makes perfect', chinese: '熟能生巧', category: CAT_NAMES[5], tag: 5, confidence: 1 },
+  ];
+  $('docTitle').value = '英语示例笔记';
+  saveAppState();
+  setProgress(0);
+  setStep(3);
+  hideStatus();
+  clearDownloadHelp();
+  renderEditList();
+  $('preview').style.display='none';
+  $('actionBtns').style.display='none';
+  $('uploadCard').style.display='none';
+  $('resultsBox').style.display='none';
+  $('editBox').style.display='block';
+  showStatus('ok', '已载入示例结果，可以体验编辑页面');
+  setTimeout(hideStatus, 1800);
 }
 
 async function uploadDocumentToCloud(blob, fileName, title) {
