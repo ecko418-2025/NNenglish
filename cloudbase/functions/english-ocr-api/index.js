@@ -153,16 +153,18 @@ async function handleSaveDocument(event) {
   const key = `documents/${id}.docx`;
 
   // 1. Upload to storage
-  await app.uploadFile({
+  const uploadRes = await app.uploadFile({
     cloudPath: key,
     fileContent: buffer
   });
+  console.log("uploadRes:", JSON.stringify(uploadRes));
 
   const item = {
     id,
     title,
     fileName,
     key,
+    fileID: uploadRes.fileID,
     size: buffer.length,
     createdAt: now.toISOString(),
     url: `/files/${id}.docx`
@@ -181,16 +183,26 @@ async function handleDownloadDocument(path) {
   }
   
   const fileId = decodeURIComponent(match[1]).replace(/\.docx$/, '');
-  const key = `documents/${fileId}.docx`;
+
+  // Query database for the document to get the exact fileID
+  const dbRes = await db.collection('documents').where({ id: fileId }).get();
+  if (!dbRes.data || dbRes.data.length === 0) {
+    return sendResponse(404, { error: 'Document not found in database' });
+  }
+
+  const doc = dbRes.data[0];
+  const fileID = doc.fileID || `cloud://cshj001-d7g5f1k0tc94d4181.6373-cshj001-d7g5f1k0tc94d4181-1428383052/documents/${fileId}.docx`;
 
   const urlRes = await app.getTempFileURL({
     fileList: [
       {
-        cloudPath: key,
+        fileID: fileID,
         maxAge: 3600 // 1 hour
       }
     ]
   });
+
+  console.log("urlRes:", JSON.stringify(urlRes));
 
   if (!urlRes.fileList || !urlRes.fileList[0] || !urlRes.fileList[0].tempFileURL) {
     return sendResponse(404, { error: 'Document download link generation failed' });

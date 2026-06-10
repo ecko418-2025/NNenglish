@@ -2,3 +2,4 @@ worker/.wrangler/
 .DS_Store
 .env.local
 index_backup.html
+node_modules/

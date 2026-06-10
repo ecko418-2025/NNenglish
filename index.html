@@ -808,7 +808,7 @@ async function startProcess(){
       
       const runWithRetry = async () => {
         try {
-          const compressedImg = await compressImage(file, 1024, 0.7);
+          const compressedImg = await compressImage(file, 800, 0.5);
           showStatus('process', `正在分析第 ${index + 1}/${total} 张图片...`);
           const items = await callDoubaoOCR(compressedImg);
           
@@ -883,7 +883,7 @@ function fileToBase64(file){
   });
 }
 
-function compressImage(file, maxWidth = 1024, quality = 0.7) {
+function compressImage(file, maxWidth = 800, quality = 0.5) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -1056,14 +1056,6 @@ async function downloadWord(){
       spacing: { after: 400 },
       children: [
         new TextRun({ text: customTitle, bold: true, size: 36, font: "Microsoft YaHei", color: "1e1b4b" })
-      ]
-    }));
-
-    children.push(new Paragraph({
-      alignment: AlignmentType.RIGHT,
-      spacing: { after: 200 },
-      children: [
-        new TextRun({ text: "导出日期: " + new Date().toLocaleDateString('zh-CN'), size: 18, font: "Microsoft YaHei", color: "666666" })
       ]
     }));
 
