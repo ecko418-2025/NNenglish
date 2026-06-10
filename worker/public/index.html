@@ -1058,26 +1058,52 @@ async function downloadWord(){
     }));
 
     // Data Table for Precise Alignment
-    const tableRows = currentResults.map((r, i) => {
-      return new TableRow({
+    const isSentence = r => r && (r.tag === 5 || r.category === "完整句子" || r.category === CAT_NAMES[5]);
+    const tableRows = [];
+
+    currentResults.forEach((r, i) => {
+      if (i > 0 && isSentence(r) && isSentence(currentResults[i - 1])) {
+        // Add a blank row between sentences
+        tableRows.push(new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 5, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [new Paragraph({ children: [] })]
+            }),
+            new TableCell({
+              width: { size: 40, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [new Paragraph({ children: [] })]
+            }),
+            new TableCell({
+              width: { size: 55, type: WidthType.PERCENTAGE },
+              borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+              children: [new Paragraph({ children: [new TextRun({ text: "", size: 28 })] })]
+            })
+          ]
+        }));
+      }
+
+      tableRows.push(new TableRow({
         children: [
           new TableCell({
             width: { size: 5, type: WidthType.PERCENTAGE },
             verticalAlign: VerticalAlign.CENTER,
-            children: [new Paragraph({ children: [new TextRun({ text: (i + 1).toString(), bold: true, size: 20 })] })]
+            children: [new Paragraph({ children: [new TextRun({ text: (i + 1).toString(), bold: true, size: 28 })] })]
           }),
           new TableCell({
             width: { size: 40, type: WidthType.PERCENTAGE },
             verticalAlign: VerticalAlign.CENTER,
-            children: [new Paragraph({ children: [new TextRun({ text: r.chinese, size: 20, font: "Microsoft YaHei" })] })]
+            children: [new Paragraph({ children: [new TextRun({ text: r.chinese, size: 28, font: "Microsoft YaHei" })] })]
           }),
           new TableCell({
             width: { size: 55, type: WidthType.PERCENTAGE },
             verticalAlign: VerticalAlign.CENTER,
-            children: [new Paragraph({ children: [new TextRun({ text: r.english, size: 20, font: "Arial" })] })]
+            children: [new Paragraph({ children: [new TextRun({ text: r.english, size: 28, font: "Arial" })] })]
           })
         ]
-      });
+      }));
     });
 
     const table = new Table({
@@ -1094,7 +1120,7 @@ async function downloadWord(){
     children.push(table);
 
     const doc = new Document({
-      styles: { default: { document: { run: { font: "Arial", size: 20 } } } },
+      styles: { default: { document: { run: { font: "Arial", size: 28 } } } },
       sections: [{
         properties: { page: { margin: { top: 1440, right: 1000, bottom: 1440, left: 1000 } } },
         children: children
