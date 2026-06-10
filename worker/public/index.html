@@ -422,8 +422,12 @@ function formatEnglish(text){
 
 let currentResults=[];
 let currentFiles=[];
-const DEFAULT_WORKER_ENDPOINT = "https://dawnbird.ecko418.workers.dev/api/ocr";
-let workerEndpoint=localStorage.getItem('ocr_worker_endpoint') || DEFAULT_WORKER_ENDPOINT;
+const DEFAULT_WORKER_ENDPOINT = "https://cshj001-d7g5f1k0tc94d4181-1428383052.ap-shanghai.app.tcloudbase.com/english-ocr-api/api/ocr";
+let workerEndpoint = localStorage.getItem('ocr_worker_endpoint');
+if (!workerEndpoint || workerEndpoint.includes('workers.dev')) {
+  workerEndpoint = DEFAULT_WORKER_ENDPOINT;
+  localStorage.setItem('ocr_worker_endpoint', DEFAULT_WORKER_ENDPOINT);
+}
 let wakeLock = null;
 
 const $=id=>document.getElementById(id);
@@ -498,7 +502,11 @@ function getWorkerEndpoint(){
 
 function getWorkerOrigin(){
   try {
-    return new URL(getWorkerEndpoint()).origin;
+    const endpoint = getWorkerEndpoint();
+    if (endpoint.includes('tcloudbase.com')) {
+      return endpoint.replace('/api/ocr', '');
+    }
+    return new URL(endpoint).origin;
   } catch (error) {
     return DEFAULT_WORKER_ENDPOINT.replace('/api/ocr', '');
   }
@@ -699,12 +707,13 @@ function loadDemoResults() {
 }
 
 async function uploadDocumentToCloud(blob, fileName, title) {
-  const form = new FormData();
-  form.append('title', title);
-  form.append('file', blob, fileName);
   const response = await fetch(workerUrl('/api/documents'), {
     method: 'POST',
-    body: form,
+    headers: {
+      'x-doc-title': encodeURIComponent(title),
+      'x-doc-filename': encodeURIComponent(fileName)
+    },
+    body: blob,
   });
   if (!response.ok) {
     const message = await response.text();

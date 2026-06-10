@@ -1,0 +1,10 @@
+{
+  "name": "english-ocr-api",
+  "version": "1.0.0",
+  "description": "Cloud Function backend for English Handwritten OCR and document storage",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "latest",
+    "node-fetch": "^2.6.9"
+  }
+}
