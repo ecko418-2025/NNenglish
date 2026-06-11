@@ -8,7 +8,6 @@
       "config": {
         "timeout": 60,
         "envVariables": {
-          "DOUBAO_API_KEY": "",
           "DOUBAO_MODEL": "doubao-seed-2-0-pro-260215"
         }
       },
