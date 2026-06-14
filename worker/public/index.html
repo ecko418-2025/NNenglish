@@ -811,8 +811,12 @@ async function startProcess(){
       
       const runWithRetry = async () => {
         try {
-          const compressedImg = await compressImage(file, 800, 0.5);
-          showStatus('process', `正在分析第 ${index + 1}/${total} 张图片...`);
+          const compressedImg = await compressImage(file, 500, 0.4);
+          const sizeKb = Math.round((compressedImg.length * 3) / 4 / 1024);
+          console.log("Image size (KB):", sizeKb);
+          console.log("Base64 length:", compressedImg.length);
+          console.log("Base64 prefix:", compressedImg.substring(0, 80));
+          showStatus('process', `正在分析第 ${index + 1}/${total} 张图片 (${sizeKb}KB)...`);
           const items = await callDoubaoOCR(compressedImg);
           
           if (items && items.length > 0) {
@@ -894,25 +898,48 @@ function compressImage(file, maxWidth = 800, quality = 0.5) {
       const img = new Image();
       img.src = e.target.result;
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
+        let currentWidth = img.width;
+        let currentHeight = img.height;
         
-        // 保持比例缩放
-        if (width > maxWidth) {
-          height = (maxWidth / width) * height;
-          width = maxWidth;
+        // Also limit max height to prevent extremely tall images from bloating payload size
+        const maxHeight = 1000;
+        
+        let ratio = 1;
+        if (currentWidth > maxWidth) {
+          ratio = maxWidth / currentWidth;
+        }
+        if (currentHeight * ratio > maxHeight) {
+          ratio = maxHeight / currentHeight;
         }
         
-        canvas.width = width;
-        canvas.height = height;
+        let targetWidth = currentWidth * ratio;
+        let targetHeight = currentHeight * ratio;
+        let currentQuality = quality;
+        let base64Result = '';
+        
+        const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // 可以在此处添加简单的图像增强（如提高对比度），但对于现代大模型通常不必要
-        ctx.drawImage(img, 0, 0, width, height);
+        let attempts = 0;
+        do {
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+          ctx.clearRect(0, 0, targetWidth, targetHeight);
+          ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+          base64Result = canvas.toDataURL('image/jpeg', currentQuality);
+          
+          // If base64 length is greater than 100,000 characters (~75KB), scale down further
+          if (base64Result.length > 100000) {
+            targetWidth *= 0.75;
+            targetHeight *= 0.75;
+            currentQuality = Math.max(0.1, currentQuality * 0.75);
+          } else {
+            break;
+          }
+          attempts++;
+        } while (base64Result.length > 100000 && attempts < 6 && targetWidth > 150);
         
-        // 使用 JPEG 格式并降低质量以大幅减小体积
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        resolve(base64Result);
       };
       img.onerror = reject;
     };
