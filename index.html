@@ -679,7 +679,10 @@ let currentResults=[];
 let currentFiles=[];
 const DEFAULT_WORKER_ENDPOINT = "https://cshj001-d7g5f1k0tc94d4181-1428383052.ap-shanghai.app.tcloudbase.com/english-ocr-api/api/ocr";
 let workerEndpoint = localStorage.getItem('ocr_worker_endpoint');
-if (!workerEndpoint || workerEndpoint.includes('workers.dev')) {
+if (window.location.hostname.includes('workers.dev')) {
+  workerEndpoint = window.location.origin + "/api/ocr";
+  localStorage.setItem('ocr_worker_endpoint', workerEndpoint);
+} else if (!workerEndpoint || workerEndpoint.includes('workers.dev')) {
   workerEndpoint = DEFAULT_WORKER_ENDPOINT;
   localStorage.setItem('ocr_worker_endpoint', DEFAULT_WORKER_ENDPOINT);
 }
