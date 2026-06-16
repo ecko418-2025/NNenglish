@@ -677,14 +677,11 @@ function formatEnglish(text){
 
 let currentResults=[];
 let currentFiles=[];
-const DEFAULT_WORKER_ENDPOINT = "https://cshj001-d7g5f1k0tc94d4181-1428383052.ap-shanghai.app.tcloudbase.com/english-ocr-api/api/ocr";
-let workerEndpoint = localStorage.getItem('ocr_worker_endpoint');
-if (window.location.hostname.includes('workers.dev')) {
-  workerEndpoint = window.location.origin + "/api/ocr";
-  localStorage.setItem('ocr_worker_endpoint', workerEndpoint);
-} else if (!workerEndpoint || workerEndpoint.includes('workers.dev')) {
-  workerEndpoint = DEFAULT_WORKER_ENDPOINT;
-  localStorage.setItem('ocr_worker_endpoint', DEFAULT_WORKER_ENDPOINT);
+const DEFAULT_API_ENDPOINT = "https://cshj001-d7g5f1k0tc94d4181-1428383052.ap-shanghai.app.tcloudbase.com/english-ocr-api/api/ocr";
+let apiEndpoint = localStorage.getItem('ocr_api_endpoint');
+if (!apiEndpoint) {
+  apiEndpoint = DEFAULT_API_ENDPOINT;
+  localStorage.setItem('ocr_api_endpoint', DEFAULT_API_ENDPOINT);
 }
 let wakeLock = null;
 
@@ -748,30 +745,30 @@ function showStatus(type,msg){const b=$('statusBox');b.className='status-box sho
 function hideStatus(){$('statusBox').className='status-box'}
 function setProgress(p){$('progressBox').style.display=p>0?'block':'none';$('progressBar').style.width=p+'%'}
 
-function getWorkerEndpoint(){
-  const endpoint = (workerEndpoint || '').trim();
+function getApiEndpoint(){
+  const endpoint = (apiEndpoint || '').trim();
   if (endpoint) return endpoint;
-  const input = prompt('请输入 Cloudflare Worker 接口地址。部署完成后只需设置一次。');
+  const input = prompt('请输入云开发接口地址。部署完成后只需设置一次。');
   if (!input || !input.trim()) return '';
-  workerEndpoint = input.trim().replace(/\/$/, '');
-  localStorage.setItem('ocr_worker_endpoint', workerEndpoint);
-  return workerEndpoint;
+  apiEndpoint = input.trim().replace(/\/$/, '');
+  localStorage.setItem('ocr_api_endpoint', apiEndpoint);
+  return apiEndpoint;
 }
 
-function getWorkerOrigin(){
+function getApiOrigin(){
   try {
-    const endpoint = getWorkerEndpoint();
+    const endpoint = getApiEndpoint();
     if (endpoint.includes('tcloudbase.com')) {
       return endpoint.replace('/api/ocr', '');
     }
     return new URL(endpoint).origin;
   } catch (error) {
-    return DEFAULT_WORKER_ENDPOINT.replace('/api/ocr', '');
+    return DEFAULT_API_ENDPOINT.replace('/api/ocr', '');
   }
 }
 
-function workerUrl(path){
-  return getWorkerOrigin() + path;
+function apiUrl(path){
+  return getApiOrigin() + path;
 }
 
 $('uploadZone').addEventListener('click',()=>$('fileInput').click());
@@ -906,7 +903,7 @@ function showCloudDownload(doc, blob, fileName) {
   if (!box) return;
   clearDownloadHelp();
   const localUrl = URL.createObjectURL(blob);
-  const cloudUrl = workerUrl(doc.url);
+  const cloudUrl = apiUrl(doc.url);
   const text = document.createElement('div');
   text.textContent = 'Word 已保存到云端。以后可以在首页“最近的学习”里重新下载。';
   const cloudLink = document.createElement('a');
@@ -965,7 +962,7 @@ function loadDemoResults() {
 }
 
 async function uploadDocumentToCloud(blob, fileName, title) {
-  const response = await fetch(workerUrl('/api/documents'), {
+  const response = await fetch(apiUrl('/api/documents'), {
     method: 'POST',
     headers: {
       'x-doc-title': encodeURIComponent(title),
@@ -986,7 +983,7 @@ async function loadDocumentHistory() {
   if (!list) return;
   list.innerHTML = '<div class="history-empty">正在读取云端文档...</div>';
   try {
-    const response = await fetch(workerUrl('/api/documents'));
+    const response = await fetch(apiUrl('/api/documents'));
     if (!response.ok) throw new Error('读取失败');
     const data = await response.json();
     renderDocumentHistory(data.documents || []);
@@ -1015,7 +1012,7 @@ function renderDocumentHistory(documents) {
     meta.textContent = `${formatTime(doc.createdAt)} · ${formatSize(doc.size || 0)}`;
     const link = document.createElement('a');
     link.className = 'history-link';
-    link.href = workerUrl(doc.url);
+    link.href = apiUrl(doc.url);
     link.target = '_blank';
     link.rel = 'noopener';
     link.textContent = '下载';
@@ -1045,7 +1042,7 @@ function formatSize(bytes) {
 
 async function startProcess(){
   if(currentFiles.length===0)return;
-  if(!getWorkerEndpoint()){alert('需要先配置 Cloudflare Worker 接口地址');return}
+  if(!getApiEndpoint()){alert('需要先配置云开发接口地址');return}
 
   $('startBtn').disabled=true;
   $('startBtn').innerHTML='<i class="bi bi-hourglass-split"></i>正在认真识别...';
@@ -1202,8 +1199,8 @@ function compressImage(file, maxWidth = 800, quality = 0.5) {
 }
 
 async function callDoubaoOCR(base64Image){
-  const endpoint = getWorkerEndpoint();
-  if(!endpoint) throw new Error('未配置 Cloudflare Worker 接口');
+  const endpoint = getApiEndpoint();
+  if(!endpoint) throw new Error('未配置云开发接口');
 
   const response = await fetch(endpoint,{
     method:'POST',
@@ -1217,7 +1214,7 @@ async function callDoubaoOCR(base64Image){
 
   if(!response.ok){
     const errText = await response.text();
-    throw new Error(errText || 'Worker连接失败');
+    throw new Error(errText || '接口连接失败');
   }
 
   const data = await response.json();
